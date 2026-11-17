@@ -7,7 +7,7 @@ from flask import Flask, jsonify, render_template, request
 
 import db
 
-VERSION = "1.0.0"
+VERSION = "2.0.0"
 FECHA_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 app = Flask(__name__)
