@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StudyTasks</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main>
+    <h1>📚 StudyTasks</h1>
+    <p class="sub">Gestor de tareas académicas corriendo en Docker</p>
+
+    <form id="form">
+      <input id="titulo" placeholder="¿Qué debes entregar?" maxlength="120" required>
+      <input id="materia" placeholder="Materia (ej. Sistemas Operativos)">
+      <input id="fecha" type="date">
+      <button type="submit">Agregar</button>
+    </form>
+    <p id="error" class="error" hidden></p>
+
+    <ul id="lista"></ul>
+    <p id="vacio" class="sub" hidden>No hay tareas. ¡Agrega la primera!</p>
+  </main>
+  <footer id="info"></footer>
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    async function cargar() {
+      const tareas = await (await fetch('/api/tareas')).json();
+      $('lista').innerHTML = '';
+      $('vacio').hidden = tareas.length > 0;
+      for (const t of tareas) {
+        const li = document.createElement('li');
+        if (t.completada) li.className = 'hecha';
+        const txt = document.createElement('span');
+        txt.textContent = `${t.titulo} · ${t.materia}` + (t.fecha_limite ? ` · 📅 ${t.fecha_limite}` : '');
+        txt.onclick = async () => { await fetch(`/api/tareas/${t.id}`, {method: 'PATCH'}); cargar(); };
+        const del = document.createElement('button');
+        del.textContent = '✕';
+        del.className = 'del';
+        del.onclick = async () => { await fetch(`/api/tareas/${t.id}`, {method: 'DELETE'}); cargar(); };
+        li.append(txt, del);
+        $('lista').append(li);
+      }
+    }
+
+    $('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const r = await fetch('/api/tareas', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({titulo: $('titulo').value, materia: $('materia').value, fecha_limite: $('fecha').value})
+      });
+      $('error').hidden = r.ok;
+      if (!r.ok) $('error').textContent = (await r.json()).error;
+      else { $('form').reset(); cargar(); }
+    });
+
+    (async () => {
+      const i = await (await fetch('/api/info')).json();
+      $('info').textContent = `v${i.version} · contenedor: ${i.contenedor} · BD: ${i.base_de_datos} · entorno: ${i.entorno}`;
+    })();
+    cargar();
+  </script>
+</body>
+</html>
